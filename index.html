@@ -73,7 +73,9 @@
 
   <canvas id="gameCanvas" width="350" height="500"></canvas>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
   <script>
+    const socket = io();
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreDisplay = document.getElementById('score');
@@ -91,6 +93,7 @@
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       player1.x = e.clientX - rect.left - paddleWidth / 2;
+      socket.emit('game_event', { player1, player2, ball, gameOver });
     });
 
     document.addEventListener("keydown", (e) => {
@@ -99,6 +102,15 @@
       } else if (e.key === "ArrowRight") {
         player2.x += 20;
       }
+      socket.emit('game_event', { player1, player2, ball, gameOver });
+    });
+
+    socket.on('game_update', (data) => {
+      player1 = data.player1;
+      player2 = data.player2;
+      ball = data.ball;
+      gameOver = data.gameOver;
+      updateGame();
     });
 
     function startGame() {
