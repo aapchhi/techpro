@@ -32,7 +32,7 @@
       z-index: 10;
     }
 
-    #gameOverPanel, #settingsPanel {
+    #gameOverPanel {
       position: absolute;
       top: 50%;
       left: 50%;
@@ -43,9 +43,6 @@
       border: 2px solid #fff;
       text-align: center;
       z-index: 20;
-    }
-
-    #gameOverPanel {
       display: none;
     }
 
@@ -54,9 +51,7 @@
       color: #00ffcc;
     }
 
-    #gameOverPanel button,
-    #settingsPanel button,
-    select {
+    #gameOverPanel button {
       margin-top: 10px;
       padding: 8px 14px;
       border: none;
@@ -66,44 +61,13 @@
       font-weight: bold;
       cursor: pointer;
     }
-
-    label {
-      display: block;
-      margin-top: 10px;
-    }
   </style>
 </head>
 <body>
-  <div id="score" style="display: none;">🧍 Игрок: 0 | 🤖 Комп: 0</div>
-
-  <div id="settingsPanel">
-    <h2>Настройки игры</h2>
-
-    <label>Сложность:
-      <select id="difficulty">
-        <option value="easy">Лёгкий</option>
-        <option value="medium" selected>Средний</option>
-        <option value="hard">Сложный</option>
-      </select>
-    </label>
-
-    <label>Цвет ракетки игрока:
-      <select id="paddleColor">
-        <option value="#00ff99" selected>Зелёный</option>
-        <option value="#ff5050">Красный</option>
-        <option value="#00aaff">Синий</option>
-        <option value="#ffff00">Жёлтый</option>
-        <option value="#ff00ff">Фиолетовый</option>
-        <option value="#ff9900">Оранжевый</option>
-        <option value="#ffffff">Белый</option>
-      </select>
-    </label>
-
-    <button onclick="startGame()">Начать игру</button>
-  </div>
+  <div id="score" style="display: none;">🧍 Игрок 1: 0 | 🧍 Игрок 2: 0</div>
 
   <div id="gameOverPanel">
-    <h2 id="resultText">Вы выиграли!</h2>
+    <h2 id="resultText">Выиграл Игрок 1!</h2>
     <button onclick="restartGame()">Играть снова</button>
   </div>
 
@@ -113,42 +77,34 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreDisplay = document.getElementById('score');
-    const settingsPanel = document.getElementById('settingsPanel');
     const gameOverPanel = document.getElementById('gameOverPanel');
     const resultText = document.getElementById('resultText');
 
-    const difficultySelect = document.getElementById('difficulty');
-    const paddleColorSelect = document.getElementById('paddleColor');
-
     const paddleWidth = 70, paddleHeight = 10;
-    let player = { x: canvas.width / 2 - paddleWidth / 2, y: canvas.height - 20 };
-    let ai = { x: canvas.width / 2 - paddleWidth / 2, y: 10 };
+    let player1 = { x: canvas.width / 2 - paddleWidth / 2, y: canvas.height - 20, score: 0 };
+    let player2 = { x: canvas.width / 2 - paddleWidth / 2, y: 10, score: 0 };
     const ballSize = 10;
     let ball = { x: canvas.width / 2, y: canvas.height / 2, dx: 3, dy: 3 };
 
-    let playerScore = 0, aiScore = 0;
     let gameOver = false;
-    let aiSpeed = 2.5;
-    let paddleColor = "#00ff99";
 
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
-      player.x = e.clientX - rect.left - paddleWidth / 2;
+      player1.x = e.clientX - rect.left - paddleWidth / 2;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        player2.x -= 20;
+      } else if (e.key === "ArrowRight") {
+        player2.x += 20;
+      }
     });
 
     function startGame() {
-      paddleColor = paddleColorSelect.value;
-      setDifficulty(difficultySelect.value);
       scoreDisplay.style.display = "block";
-      settingsPanel.style.display = "none";
       resetBall();
       gameLoop();
-    }
-
-    function setDifficulty(level) {
-      if (level === "easy") aiSpeed = 1.5;
-      else if (level === "medium") aiSpeed = 2.5;
-      else if (level === "hard") aiSpeed = 4;
     }
 
     function gameLoop() {
@@ -157,12 +113,12 @@
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Рисуем игрока и AI
-      ctx.fillStyle = paddleColor;
-      ctx.fillRect(player.x, player.y, paddleWidth, paddleHeight);
+      // Рисуем игроков
+      ctx.fillStyle = "#00ff99"; // Игрок 1
+      ctx.fillRect(player1.x, player1.y, paddleWidth, paddleHeight);
 
-      ctx.fillStyle = "#ff5050";
-      ctx.fillRect(ai.x, ai.y, paddleWidth, paddleHeight);
+      ctx.fillStyle = "#ff5050"; // Игрок 2
+      ctx.fillRect(player2.x, player2.y, paddleWidth, paddleHeight);
 
       // Рисуем мяч
       ctx.fillStyle = "#fff";
@@ -176,37 +132,33 @@
 
       if (ball.x <= ballSize || ball.x >= canvas.width - ballSize) ball.dx *= -1;
 
-      // AI движение
-      if (ball.x > ai.x + paddleWidth / 2) ai.x += aiSpeed;
-      else ai.x -= aiSpeed;
-
       // Отскоки
-      if (ball.y + ballSize >= player.y &&
-          ball.x >= player.x && ball.x <= player.x + paddleWidth) {
+      if (ball.y + ballSize >= player1.y &&
+          ball.x >= player1.x && ball.x <= player1.x + paddleWidth) {
         ball.dy *= -1;
-        ball.y = player.y - ballSize;
+        ball.y = player1.y - ballSize;
       }
 
-      if (ball.y - ballSize <= ai.y + paddleHeight &&
-          ball.x >= ai.x && ball.x <= ai.x + paddleWidth) {
+      if (ball.y - ballSize <= player2.y + paddleHeight &&
+          ball.x >= player2.x && ball.x <= player2.x + paddleWidth) {
         ball.dy *= -1;
-        ball.y = ai.y + paddleHeight + ballSize;
+        ball.y = player2.y + paddleHeight + ballSize;
       }
 
       // Голы
       if (ball.y > canvas.height) {
-        aiScore++;
+        player2.score++;
         checkGameOver();
         resetBall();
       }
 
       if (ball.y < 0) {
-        playerScore++;
+        player1.score++;
         checkGameOver();
         resetBall();
       }
 
-      scoreDisplay.textContent = `🧍 Игрок: ${playerScore} | 🤖 Комп: ${aiScore}`;
+      scoreDisplay.textContent = `🧍 Игрок 1: ${player1.score} | 🧍 Игрок 2: ${player2.score}`;
       requestAnimationFrame(gameLoop);
     }
 
@@ -220,19 +172,19 @@
     }
 
     function checkGameOver() {
-      if (playerScore >= 5 || aiScore >= 5) {
+      if (player1.score >= 5 || player2.score >= 5) {
         gameOver = true;
-        resultText.textContent = playerScore > aiScore ? "🎉 Победа!" : "💥 Поражение!";
+        resultText.textContent = player1.score > player2.score ? "🎉 Игрок 1 выиграл!" : "🎉 Игрок 2 выиграл!";
         gameOverPanel.style.display = "block";
       }
     }
 
     function restartGame() {
-      playerScore = aiScore = 0;
+      player1.score = player2.score = 0;
       gameOver = false;
       gameOverPanel.style.display = "none";
-      settingsPanel.style.display = "block";
       scoreDisplay.style.display = "none";
+      startGame();
     }
   </script>
 </body>
