@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Ping Pong</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to right, #232526, #414345);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+      font-family: Arial, sans-serif;
+      position: relative;
+    }
+
+    canvas {
+      border: 3px solid #fff;
+      background-color: #000;
+      border-radius: 10px;
+    }
+
+    #score {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      z-index: 10;
+    }
+
+    #gameOverPanel, #settingsPanel {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e1e;
+      padding: 20px 30px;
+      border-radius: 15px;
+      border: 2px solid #fff;
+      text-align: center;
+      z-index: 20;
+    }
+
+    #gameOverPanel {
+      display: none;
+    }
+
+    #gameOverPanel h2 {
+      margin-bottom: 15px;
+      color: #00ffcc;
+    }
+
+    #gameOverPanel button,
+    #settingsPanel button,
+    select {
+      margin-top: 10px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: #00ff99;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="score" style="display: none;">🧍 Игрок: 0 | 🤖 Комп: 0</div>
+
+  <div id="settingsPanel">
+    <h2>Настройки игры</h2>
+
+    <label>Сложность:
+      <select id="difficulty">
+        <option value="easy">Лёгкий</option>
+        <option value="medium" selected>Средний</option>
+        <option value="hard">Сложный</option>
+      </select>
+    </label>
+
+    <label>Цвет ракетки игрока:
+      <select id="paddleColor">
+        <option value="#00ff99" selected>Зелёный</option>
+        <option value="#ff5050">Красный</option>
+        <option value="#00aaff">Синий</option>
+        <option value="#ffff00">Жёлтый</option>
+        <option value="#ff00ff">Фиолетовый</option>
+        <option value="#ff9900">Оранжевый</option>
+        <option value="#ffffff">Белый</option>
+      </select>
+    </label>
+
+    <button onclick="startGame()">Начать игру</button>
+  </div>
+
+  <div id="gameOverPanel">
+    <h2 id="resultText">Вы выиграли!</h2>
+    <button onclick="restartGame()">Играть снова</button>
+  </div>
+
+  <canvas id="gameCanvas" width="350" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score');
+    const settingsPanel = document.getElementById('settingsPanel');
+    const gameOverPanel = document.getElementById('gameOverPanel');
+    const resultText = document.getElementById('resultText');
+
+    const difficultySelect = document.getElementById('difficulty');
+    const paddleColorSelect = document.getElementById('paddleColor');
+
+    const paddleWidth = 70, paddleHeight = 10;
+    let player = { x: canvas.width / 2 - paddleWidth / 2, y: canvas.height - 20 };
+    let ai = { x: canvas.width / 2 - paddleWidth / 2, y: 10 };
+    const ballSize = 10;
+    let ball = { x: canvas.width / 2, y: canvas.height / 2, dx: 3, dy: 3 };
+
+    let playerScore = 0, aiScore = 0;
+    let gameOver = false;
+    let aiSpeed = 2.5;
+    let paddleColor = "#00ff99";
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      player.x = e.clientX - rect.left - paddleWidth / 2;
+    });
+
+    function startGame() {
+      paddleColor = paddleColorSelect.value;
+      setDifficulty(difficultySelect.value);
+      scoreDisplay.style.display = "block";
+      settingsPanel.style.display = "none";
+      resetBall();
+      gameLoop();
+    }
+
+    function setDifficulty(level) {
+      if (level === "easy") aiSpeed = 1.5;
+      else if (level === "medium") aiSpeed = 2.5;
+      else if (level === "hard") aiSpeed = 4;
+    }
+
+    function gameLoop() {
+      if (gameOver) return;
+
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Рисуем игрока и AI
+      ctx.fillStyle = paddleColor;
+      ctx.fillRect(player.x, player.y, paddleWidth, paddleHeight);
+
+      ctx.fillStyle = "#ff5050";
+      ctx.fillRect(ai.x, ai.y, paddleWidth, paddleHeight);
+
+      // Рисуем мяч
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ballSize, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Движение мяча
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      if (ball.x <= ballSize || ball.x >= canvas.width - ballSize) ball.dx *= -1;
+
+      // AI движение
+      if (ball.x > ai.x + paddleWidth / 2) ai.x += aiSpeed;
+      else ai.x -= aiSpeed;
+
+      // Отскоки
+      if (ball.y + ballSize >= player.y &&
+          ball.x >= player.x && ball.x <= player.x + paddleWidth) {
+        ball.dy *= -1;
+        ball.y = player.y - ballSize;
+      }
+
+      if (ball.y - ballSize <= ai.y + paddleHeight &&
+          ball.x >= ai.x && ball.x <= ai.x + paddleWidth) {
+        ball.dy *= -1;
+        ball.y = ai.y + paddleHeight + ballSize;
+      }
+
+      // Голы
+      if (ball.y > canvas.height) {
+        aiScore++;
+        checkGameOver();
+        resetBall();
+      }
+
+      if (ball.y < 0) {
+        playerScore++;
+        checkGameOver();
+        resetBall();
+      }
+
+      scoreDisplay.textContent = `🧍 Игрок: ${playerScore} | 🤖 Комп: ${aiScore}`;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function resetBall() {
+      ball = {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        dx: (Math.random() > 0.5 ? 3 : -3),
+        dy: (Math.random() > 0.5 ? 3 : -3)
+      };
+    }
+
+    function checkGameOver() {
+      if (playerScore >= 5 || aiScore >= 5) {
+        gameOver = true;
+        resultText.textContent = playerScore > aiScore ? "🎉 Победа!" : "💥 Поражение!";
+        gameOverPanel.style.display = "block";
+      }
+    }
+
+    function restartGame() {
+      playerScore = aiScore = 0;
+      gameOver = false;
+      gameOverPanel.style.display = "none";
+      settingsPanel.style.display = "block";
+      scoreDisplay.style.display = "none";
+    }
+  </script>
+</body>
+</html>
